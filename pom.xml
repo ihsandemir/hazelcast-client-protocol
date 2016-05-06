@@ -27,6 +27,7 @@
 
     <modules>
         <module>hazelcast</module>
+        <module>compatibility-tests</module>
         <module>hazelcast-code-generator</module>
     </modules>
 
