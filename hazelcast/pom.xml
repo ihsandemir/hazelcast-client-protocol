@@ -46,7 +46,7 @@
                     <target>${jdk.version}</target>
                     <encoding>${project.build.sourceEncoding}</encoding>
                     <annotationProcessors>
-                        <annotationProcessor>com.hazelcast.client.protocol.generator.CodecCodeGenerator
+                        <annotationProcessor>com.hazelcast.com.client.protocol.generator.CodecCodeGenerator
                         </annotationProcessor>
                     </annotationProcessors>
                 </configuration>
