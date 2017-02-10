@@ -31,6 +31,7 @@ import com.hazelcast.nio.serialization.Data;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Client Protocol Responses
@@ -181,4 +182,7 @@ public interface ResponseTemplate {
     @Response(ResponseMessageConst.LIST_SCHEDULED_TASK_HANDLER)
     void ListScheduledTaskHandler(List<String> handlers);
 
+    @Since("1.4")
+    @Response(ResponseMessageConst.NEAR_CACHE_INVALIDATION_META_DATA)
+    void NearCacheInvalidationMetaData(List<Map.Entry<String, List<Map.Entry<Integer, Long>>>> namePartitionSequenceList, List<Map.Entry<Integer, UUID>> partitionUuidList);
 }
