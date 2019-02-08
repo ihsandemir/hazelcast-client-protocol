@@ -27,7 +27,7 @@
         <groupId>com.hazelcast</groupId>
         <artifactId>hazelcast-client-protocol-root</artifactId>
         <!-- DO NOT CHANGE THIS VERSION, IT IS MODIFIED VIA SCRIPTS IN RELEASE PROCESS ONLY -->
-        <version>1.8.0-3</version>
+        <version>1.8.0-4</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
@@ -92,8 +92,8 @@
                         </goals>
                         <configuration>
                             <arguments>
-                                <argument>${hazelcast.git.repo}</argument>
-                                <argument>${hazelcast.git.branch}</argument>
+                                <argument>ihsandemir</argument>
+                                <argument>clientLabels</argument>
                             </arguments>
                             <executable>${basedir}/scripts/downloadHazelcast.sh</executable>
                         </configuration>
