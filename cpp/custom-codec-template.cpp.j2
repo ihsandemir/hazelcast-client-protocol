@@ -1,0 +1,113 @@
+{% macro encode_var_sized(param) -%}
+        {% if is_var_sized_list(param.type) or is_var_sized_list_contains_nullable(param.type) -%}
+        msg.set{% if is_var_sized_list_contains_nullable(param.type)%}ContainsNullable{% endif %}{% if param.nullable  %}Nullable{% endif %}({{ param_name(codec.name)}}.{% if param.type == 'boolean' %}is{% else %}get{% endif %}{{ param.name|capital }}(), {{ item_type(lang_name, param.type) }}Codec::encode);
+{#
+    {%- elif is_var_sized_entry_list(param.type) -%}
+        EntryListCodec.encode{% if param.nullable  %}Nullable{% endif %}(msg, {{ param_name(codec.name)}}.{% if param.type == 'boolean' %}is{% else %}get{% endif %}{{ param.name|capital }}(), {{ key_type(lang_name, param.type) }}Codec::encode, {{ value_type(lang_name, param.type) }}Codec::encodeNullable)
+    {%- elif is_var_sized_map(param.type) -%}
+        MapCodec.encode{% if param.nullable  %}Nullable{% endif %}(msg, {{ param_name(codec.name)}}.{% if param.type == 'boolean' %}is{% else %}get{% endif %}{{ param.name|capital }}(), {{ key_type(lang_name, param.type) }}Codec::encode, {{ value_type(lang_name, param.type) }}Codec::encode)
+#}
+    {%- else -%}
+        msg.set{% if param.nullable  %}Nullable{% endif %}({{ param_name(codec.name)}}.{% if param.type == 'boolean' %}is{% else %}get{% endif %}{{ param.name|capital }}());
+    {% endif %}
+{%- endmacro %}
+{% macro decode_var_sized(param) -%}
+    {%- if is_var_sized_list(param.type) or is_var_sized_list_contains_nullable(param.type) -%}
+        ListMultiFrameCodec.decode{% if is_var_sized_list_contains_nullable(param.type) %}ContainsNullable{% endif %}{% if param.nullable  %}Nullable{% endif %}(iterator, {{ item_type(lang_name, param.type) }}Codec::decode)
+    {%- elif is_var_sized_entry_list(param.type) -%}
+        EntryListCodec.decode{% if param.nullable  %}Nullable{% endif %}(iterator, {{ key_type(lang_name, param.type) }}Codec::decode, {{ value_type(lang_name, param.type) }}Codec::decodeNullable)
+    {%- elif is_var_sized_map(param.type) -%}
+        MapCodec.decode{% if param.nullable  %}Nullable{% endif %}(iterator, {{ key_type(lang_name, param.type) }}Codec::decode, {{ value_type(lang_name, param.type) }}Codec::decode)
+    {%- else -%}
+        {%- if param.nullable  -%}
+            CodecUtil.decodeNullable(iterator, {{ lang_name(param.type) }}Codec::decode)
+        {%- else -%}
+            {{ lang_name(param.type) }}Codec.decode(iterator)
+        {%- endif -%}
+    {%- endif -%}
+{%- endmacro %}
+/*
+ * Copyright (c) 2008-2020, Hazelcast, Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+// @Generated("!codec_hash!")
+
+#pragma once
+
+#include "{{ codec.name.lower() }}_codec.h"
+
+{% set fix_sized_params = fixed_params(codec.params) %}
+{% set var_sized_params = var_size_params(codec.params) %}
+{% set should_add_begin_frame = fix_sized_params|length == 0 %}
+void hazelcast::client::protocol::codec::{{ codec.name.lower() }}_codec::encode(ClientMessage &msg, const {{ lang_types_encode(codec.name) }} &{{ param_name(codec.name) }}) {
+        size_t initial_frame_size = SIZE_OF_FRAME_LENGTH_AND_FLAGS + {% for param in fix_sized_params %} {% if not loop.first %} + {% endif %}{{ get_size(param.type) }} {% endfor %};
+
+        {% if should_add_begin_frame %}
+        auto *h = reinterpret_cast<frame_header_t *>(wr_ptr(sizeof(ClientMessage::BEGIN_FRAME)));
+        *h = ClientMessage::BEGIN_FRAME;
+        {% endif %}
+
+        {% for param in fix_sized_params %}
+        {% if loop.first %}
+        auto *initial_frame = reinterpret_cast<frame_header_t *>(wr_ptr(sizeof(frame_header_t)));
+        initial_frame->frame_len = initial_frame_size;
+        initial_frame->flags = ClientMessage::DEFAULT_FLAGS;
+            {% if not should_add_begin_frame %}
+        initial_frame->flags |= ClientMessage::BEGIN_DATA_STRUCTURE_FLAG;
+            {% endif %}
+        {% endif %}
+        msg.set({{ param_name(codec.name)}}.{% if param.type == 'boolean' %}is{% else %}get{% endif %}{{ param.name|capital }}());
+        {% if loop.last %}
+
+        {% endif %}
+        {% endfor %}
+        {% for param in var_sized_params %}
+        {{ encode_var_sized(param) }}
+        {% endfor %}
+
+        auto *h = reinterpret_cast<frame_header_t *>(wr_ptr(sizeof(ClientMessage::END_FRAME)));
+        *h = ClientMessage::END_FRAME;
+}
+
+{{ lang_types_decode(codec.name) }} hazelcast::client::protocol::codec::{{ codec.name.lower() }}_codec::decode(hazelcast::client::protocol::ClientMessage &msg) {
+        // begin frame
+        {% if should_add_begin_frame %}
+        msg.next_frame();
+
+        {% endif %}
+        {% for param in fix_sized_params %}
+        {% if loop.first %}
+        ClientMessage.Frame initialFrame = iterator.next();
+        {% endif %}
+        {{ lang_types_decode(param.type) }} {{ param.name }} = msg.get< {{ lang_types_decode(param.type) }} >();
+            {% if loop.last %}
+
+            {% endif %}
+        {% endfor %}
+        {% for param in var_sized_params %}
+        {{ lang_types_decode(param.type) }} {{ param.name }} = msg.get< {{ lang_types_decode(param.type) }} >();
+            {% if loop.last %}
+
+            {% endif %}
+        {% endfor %}
+        msg.fast_forward_to_end_frame(iterator);
+
+        {% if codec.returnWithFactory %}
+        return custom_type_factory.create_{{ codec.name.lower() }}({% for param in codec.params %}{{ param.name }}{% if not loop.last %}, {% endif %}{% endfor %});
+        {% else %}
+        return new {{ lang_types_decode(codec.name) }}({% for param in codec.params %}{{ param.name }}{% if not loop.last %}, {% endif %}{% endfor %});
+        {% endif %}
+}
+
+
