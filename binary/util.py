@@ -455,7 +455,6 @@ reference_objects_dict = {
     'List_CPMember': 'aListOfCpMembers',
     'MigrationState': 'aMigrationState',
     'Schema': 'aSchema',
-    'List_Schema': 'aListOfSchemas',
     'SqlPage': 'aSqlPage'
 }
 
